@@ -51,7 +51,7 @@ def get_MoCo_feature_extractor(
     log("Generating initial keys queue")
     num_initial_key_batches = key_dictionary_size // loader.batch_size
     loader_iterator = DataLoaderCyclicIterator(loader)
-    keys_queue = torch.cat([
+    keys_queue = torch.stack([
         f_k(
             augment(next(loader_iterator))
         )
