@@ -1,7 +1,7 @@
 from torchvision import datasets, transforms
 
 
-def get_aug(image_):
+def augment(image_):
     """
 
     :param image_: image of size 3xHxW

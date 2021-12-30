@@ -1,8 +1,9 @@
 import torch
 from torchvision import datasets, transforms
+from os.path import join
 
 
-def get_loader(data_path, batch_size):
+def get_loaders(data_path, batch_size):
     """
 
     :param data_path: path to the directory in which we have the train and validation files
@@ -14,10 +15,10 @@ def get_loader(data_path, batch_size):
                                              transforms.CenterCrop(224),
                                              transforms.ToTensor()])}
 
-    ds_train = datasets.ImageFolder(data_path/'train', transform=transform_["train"])
-    ds_val = datasets.ImageFolder(data_path/'val', transform=transform_["val"])
+    ds_train = datasets.ImageFolder(join(data_path, 'train'), transform=transform_["train"])
+    ds_val = datasets.ImageFolder(join(data_path, 'val'), transform=transform_["val"])
 
-    dl_train = torch.utils.data.DataLoader(ds_train, batch_size, shuffle=False)
-    dl_val = torch.utils.data.DataLoader(ds_val, batch_size, shuffle=False)
+    dl_train = torch.utils.data.DataLoader(ds_train, batch_size, shuffle=False, num_workers=2)
+    dl_val = torch.utils.data.DataLoader(ds_val, batch_size, shuffle=False, num_workers=2)
 
     return dl_train, dl_val

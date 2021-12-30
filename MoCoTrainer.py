@@ -7,6 +7,7 @@ from tqdm import tqdm
 from typing import Callable
 from termcolor import colored
 from FeatureExtractor import get_encoder
+from DataHandling import DataLoaderCyclicIterator
 
 
 def log(msg):
@@ -21,7 +22,7 @@ def update_learning_rate(optimizer: torch.optim, epoch: int, total_epochs: int):
 def get_MoCo_feature_extractor(
         temperature: float,
         loader: torch.utils.data.DataLoader,
-        get_aug: Callable[[], Callable[[torch.Tensor], torch.Tensor]],
+        augment: Callable[[torch.Tensor], torch.Tensor],
         momentum: float,
         key_dictionary_size: int,
         num_epochs: int):
@@ -29,7 +30,7 @@ def get_MoCo_feature_extractor(
     Generates a feature extraction network as described by MoCo v2 paper based on the ResNet50 feature extractor backbone
     :param temperature: hyperparameter defining the density of the contrastive loss function
     :param loader: unlabeled training data loader
-    :param get_aug: augmentation function generator
+    :param augment: augmentation function (random augmentation)
     :param momentum: hyperparameter defining the speed at which the key dictionary is updated
     :param key_dictionary_size: hyperparameter defining the number of keys to maintain.  Should be a   product of the loader batch_size
     :param num_epochs: number of epochs to train the MoCo feature extractor
@@ -41,16 +42,18 @@ def get_MoCo_feature_extractor(
 
     # init
     log("Initializing feature extractor training")
-    f_q = get_encoder()
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    f_q = get_encoder().to(device)
     optimizer = torch.optim.SGD(f_q.parameters(), lr=0.03, weight_decay=1e-4, momentum=0.9)
     f_k = copy.deepcopy(f_q)  # create independent copy of f_q that begins with the same parameters but updates more slowly
 
     # Generate keys_queue
     log("Generating initial keys queue")
     num_initial_key_batches = key_dictionary_size // loader.batch_size
+    loader_iterator = DataLoaderCyclicIterator(loader)
     keys_queue = torch.cat([
         f_k(
-            get_aug()(next(loader))
+            augment(next(loader_iterator))
         )
         for _ in tqdm(range(num_initial_key_batches))
     ])
@@ -58,9 +61,9 @@ def get_MoCo_feature_extractor(
     log("Beginning training loop")
     for epoch in tqdm(range(num_epochs)):
         update_learning_rate(optimizer, epoch, num_epochs)
-        for x in loader:  # load a minibatch x with N samples
-            x_q = get_aug()(x)  # a randomly augmented version
-            x_k = get_aug()(x)  # another randomly augmented version
+        for x in loader_iterator:  # load a minibatch x with N samples
+            x_q = augment(x)  # a randomly augmented version
+            x_k = augment(x)  # another randomly augmented version
             q = f_q(x_q)  # queries: NxC
             k = f_k(x_k)  # keys: NxC
             k = k.detach()  # no gradient to keys
@@ -83,7 +86,7 @@ def get_MoCo_feature_extractor(
             loss.backward()
             optimizer.step()
             # momentum update: key network
-            f_k.params = momentum*f_k.params + (1-momentum)*f_q.params  # FIXME: f_k.parameters()
+            f_k.params = momentum*f_k.parameters() + (1-momentum)*f_q.parameters()  # FIXME: f_k.parameters()
 
             # update dictionary
             keys_queue = torch.cat((keys_queue, k))  # enqueue the current minibatch
