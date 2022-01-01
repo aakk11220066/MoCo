@@ -53,7 +53,7 @@ def get_MoCo_feature_extractor(
     loader_iterator = DataLoaderCyclicIterator(loader)
     keys_queue = torch.stack([
         f_k(
-            augment(next(loader_iterator))
+            augment(next(loader_iterator)[0])  # load only the images, not the labels
         )
         for _ in tqdm(range(num_initial_key_batches))
     ])
