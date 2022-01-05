@@ -7,8 +7,7 @@ def augment(image_):
     :param image_: image of size 3xHxW
     :return: a random augmented image of the input image
     """
-    aug_transform = transforms.Compose([transforms.RandomResizedCrop(224),
-                                        transforms.ColorJitter(0.8),
+    aug_transform = transforms.Compose([transforms.ColorJitter(0.8),
                                         transforms.RandomHorizontalFlip(),
                                         transforms.RandomGrayscale(0.2),
                                         transforms.GaussianBlur(kernel_size=3)])
