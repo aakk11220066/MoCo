@@ -10,10 +10,15 @@ def get_loaders(data_path, batch_size):
     :param batch_size: the size of the train and validation batch
     :return: train and validation images as Torch DataLoaders
     """
-    transform_ = {"train": transforms.Compose([transforms.RandomResizedCrop(224), transforms.ToTensor()]),
+    transform_ = {"train": transforms.Compose([transforms.RandomResizedCrop(224),
+                                               transforms.ToTensor(),
+                                               transforms.Normalize([0.4914, 0.4822, 0.4465],
+                                                                    [0.2023, 0.1994, 0.2010])]),
                   "val": transforms.Compose([transforms.Resize(256),
                                              transforms.CenterCrop(224),
-                                             transforms.ToTensor()])}
+                                             transforms.ToTensor(),
+                                             transforms.Normalize([0.4914, 0.4822, 0.4465],
+                                                                  [0.2023, 0.1994, 0.2010])])}
 
     ds_train = datasets.ImageFolder(join(data_path, 'train'), transform=transform_["train"])
     ds_val = datasets.ImageFolder(join(data_path, 'val'), transform=transform_["val"])
