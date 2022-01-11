@@ -24,7 +24,7 @@ def get_loaders(data_path, batch_size):
     ds_val = datasets.ImageFolder(join(data_path, 'val'), transform=transform_["val"])
 
     # Set num_workers = 0 if this causes crashes on your machine (it's dependent on how many subcores you have available)
-    dl_train = torch.utils.data.DataLoader(ds_train, batch_size, shuffle=False, num_workers=0)
-    dl_val = torch.utils.data.DataLoader(ds_val, batch_size, shuffle=False, num_workers=0)
+    dl_train = torch.utils.data.DataLoader(ds_train, batch_size, shuffle=True, num_workers=0)
+    dl_val = torch.utils.data.DataLoader(ds_val, batch_size, shuffle=True, num_workers=0)
 
     return dl_train, dl_val
