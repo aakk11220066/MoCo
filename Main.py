@@ -3,67 +3,48 @@ from Datasets import get_loaders
 from Augmentations import augment
 from MoCoTrainer import get_MoCo_feature_extractor
 from tqdm import tqdm
+import fastai
+from fastai.vision import *
+from fastai.basics import *
+from Linear_classifier import Classifier
+from Classifier_trainer import ClassifierTrainer
+from Plot_results import plot_fit
+from FeatureExtractor import get_encoder
 
 
 # Hyperparams taken from paper
 TEMPERATURE = 0.07
 MOMENTUM = 0.999
-KEY_DICTIONARY_SIZE = 4096 # FIXME: should be 4096
-NUM_EPOCHS = 800
+KEY_DICTIONARY_SIZE = 4096
+NUM_EPOCHS = 100
+
+# path = untar_data(URLs.IMAGENETTE)
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def accuracy(predicted_labels, true_labels):
-    return (predicted_labels == true_labels).sum() / len(true_labels)
+# def accuracy(predicted_labels, true_labels):
+#     return (predicted_labels == true_labels).sum() / len(true_labels)
+#
+#
+train_loader, test_loader = get_loaders(data_path="imagenette2", batch_size=256)
+#
+# f_q = get_MoCo_feature_extractor(temperature=TEMPERATURE, loader=train_loader,
+#                                   augment=augment, momentum=MOMENTUM,
+#                                   key_dictionary_size=KEY_DICTIONARY_SIZE, num_epochs=NUM_EPOCHS)
 
+f_q = get_encoder().to(device)
+f_q.load_state_dict(torch.load('f_q_weights.pth', map_location=torch.device('cpu')))
 
-''' First test MoCoTrainer.py successful train (incomplete), then test quality of extracted features with this classifier
-class Classifier(torch.nn.Module):
-    def __init__(self, feature_extractor: torch.nn.Module, loss_func, optimizer_type):
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.feature_extractor = feature_extractor.to(device=device)
-        ftr_exctr_final_layer = self.feature_extractor.fc[-1]
-        self.fc = torch.nn.Linear(in_features=ftr_exctr_final_layer.out_features, out_features=ftr_exctr_final_layer.out_features, device=device)
-        self.loss_func = loss_func
-        self.optimizer = optimizer_type(self.fc.parameters())
+imagenette_classifier = Classifier(feature_extractor=f_q)
 
-    def forward(self, x):
-        with torch.no_grad():
-            x = self.feature_extractor(x)  # Only fine-tune classifier head
-        x = self.fc(x)
-        return x
+optimizer = torch.optim.SGD(imagenette_classifier.parameters(), lr=0.1, weight_decay=0, momentum=0.9)
 
-    def train(self, train_loader, val_loader=None):
-        validation_accuracies = []
-        for _ in tqdm(range(NUM_EPOCHS)):
-            for inputs, true_labels in train_loader:
-                self.optimizer.zero_grad()
+loss_fn = torch.nn.CrossEntropyLoss()
 
-                predicted_labels = self.forward(inputs)
-                loss = self.loss_func(predicted_labels, true_labels)
-                loss.backward()
-                self.optimizer.step()
+trainer = ClassifierTrainer(imagenette_classifier, loss_fn, optimizer)
 
-                print(f"loss={loss}")
+fit_result = trainer.fit(train_loader, test_loader, num_epochs=NUM_EPOCHS)
 
-                if val_loader:
-                    inputs, true_labels = next(val_loader)
-                    with torch.no_grad():
-                        predicted_labels = self.forward(inputs)
-                    validation_accuracies.append(accuracy(predicted_labels=predicted_labels, true_labels=true_labels))
+fig, axes = plot_fit(fit_result)
 
-    def test(self, test_loader):
-        total_correct = 0
-        test_size = 0
-        for inputs, true_labels in test_loader:
-            predicted_labels = self.forward(inputs)
-            total_correct += (predicted_labels == true_labels).sum()
-            test_size += len(true_labels)
-
-        print(f"Accuracy: {total_correct / test_size}")
-'''
-
-train_loader, test_loader = get_loaders(data_path="imagenette2", batch_size=32)  #FIXME: should be 256
-
-f_q_ = get_MoCo_feature_extractor(temperature=TEMPERATURE, loader=train_loader,
-                                  augment=augment, momentum=MOMENTUM,
-                                  key_dictionary_size=KEY_DICTIONARY_SIZE, num_epochs=NUM_EPOCHS)
+print('finished')
