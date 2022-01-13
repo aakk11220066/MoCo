@@ -2,7 +2,7 @@ from typing import Callable, Any
 import torch
 from Train_results import BatchResult, EpochResult, FitResult
 import torch.nn as nn
-from Linear_classifier import Classifier
+# from Linear_classifier import Classifier
 from torch.utils.data import DataLoader
 import tqdm
 import sys
@@ -14,13 +14,12 @@ class ClassifierTrainer():
     Trainer for our Classifier-based model.
     """
 
-    def __init__(self, model: Classifier, loss_fn: nn.Module, optimizer: torch.optim.Optimizer):
+    def __init__(self, model: nn.Module, loss_fn: nn.Module, optimizer: torch.optim.Optimizer):
         """
         Initialize the trainer.
         :param model: Instance of the classifier model to train.
         :param loss_fn: The loss function to evaluate with.
         :param optimizer: The optimizer to train with.
-        :param device: torch.device to run training on (CPU or GPU).
         """
         self.model = model
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -39,7 +38,6 @@ class ClassifierTrainer():
             # TODO: Train & evaluate for one epoch
             #  - Save losses and accuracies in the lists above.
             train_result = self.train_epoch(dl_train)
-            # print(train_result.accuracy)
             train_loss.append(sum(train_result.losses) / len(train_result.losses))
             train_acc.append(train_result.accuracy)
 
@@ -81,7 +79,6 @@ class ClassifierTrainer():
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
-        # print(num_batches)
 
         if max_batches is not None:
             if max_batches < num_batches:
@@ -98,7 +95,6 @@ class ClassifierTrainer():
         pbar_name = forward_fn.__name__
         with pbar_fn(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
             dl_iter = iter(dl)
-            # for batch_idx, data in enumerate(dl):
             for batch_idx in range(num_batches):
                 data = next(dl_iter)
                 batch_res = forward_fn(data)
@@ -124,6 +120,7 @@ class ClassifierTrainer():
 
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
+
         if self.device:
             X = X.to(self.device)
             y = y.to(self.device)
