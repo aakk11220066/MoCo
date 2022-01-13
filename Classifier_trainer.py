@@ -2,7 +2,7 @@ from typing import Callable, Any
 import torch
 from Train_results import BatchResult, EpochResult, FitResult
 import torch.nn as nn
-# from Linear_classifier import Classifier
+from Linear_classifier import Classifier
 from torch.utils.data import DataLoader
 import tqdm
 import sys
@@ -14,7 +14,7 @@ class ClassifierTrainer():
     Trainer for our Classifier-based model.
     """
 
-    def __init__(self, model: nn.Module, loss_fn: nn.Module, optimizer: torch.optim.Optimizer):
+    def __init__(self, model: Classifier, loss_fn: nn.Module, optimizer: torch.optim.Optimizer):
         """
         Initialize the trainer.
         :param model: Instance of the classifier model to train.
