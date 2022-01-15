@@ -9,7 +9,7 @@ class Classifier(torch.nn.Module):
         self.feature_extractor = feature_extractor.to(device=device)
         self.fc = torch.nn.Sequential(
             torch.nn.Linear(in_features=2048, out_features=self.num_classes, device=device),
-            torch.nn.Softmax(dim=1)
+            # torch.nn.LogSoftmax(dim=1)
         ).to(device)
 
     def forward(self, x):
