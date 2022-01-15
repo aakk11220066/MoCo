@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import tqdm
 import sys
 import os
+import math
 
 
 class ClassifierTrainer():
@@ -14,7 +15,7 @@ class ClassifierTrainer():
     Trainer for our Classifier-based model.
     """
 
-    def __init__(self, model: Classifier, loss_fn: nn.Module, optimizer: torch.optim.Optimizer):
+    def __init__(self, model: Classifier, loss_fn: nn.Module, optimizer: torch.optim.Optimizer, scheduler: torch.optim.lr_scheduler):
         """
         Initialize the trainer.
         :param model: Instance of the classifier model to train.
@@ -26,17 +27,20 @@ class ClassifierTrainer():
 
         self.optimizer = optimizer
         self.loss_fn = loss_fn
+        self.scheduler = scheduler
 
-    def fit(self, dl_train: DataLoader, dl_test: DataLoader, num_epochs: int) -> EpochResult:
+    def fit(self, dl_train: DataLoader, dl_test: DataLoader, num_epochs: int, checkpoints: str = None,
+            early_stopping: int = None) -> EpochResult:
         actual_num_epochs = 0
+        epochs_without_improvement = 0
         train_loss, train_acc, test_loss, test_acc = [], [], [], []
         best_acc = None
 
         for epoch in range(num_epochs):
             print(f"--- EPOCH {epoch + 1}/{num_epochs} ---")
 
-            # TODO: Train & evaluate for one epoch
-            #  - Save losses and accuracies in the lists above.
+            actual_num_epochs += 1
+
             train_result = self.train_epoch(dl_train)
             train_loss.append(sum(train_result.losses) / len(train_result.losses))
             train_acc.append(train_result.accuracy)
@@ -45,8 +49,21 @@ class ClassifierTrainer():
             test_loss.append(sum(test_result.losses) / len(test_result.losses))
             test_acc.append(test_result.accuracy)
 
+            self.scheduler.step()
+
             if best_acc is None or test_result.accuracy > best_acc:
                 best_acc = test_result.accuracy
+                epochs_without_improvement = 0
+                if checkpoints is not None:
+                    save_as = f'epoch_{actual_num_epochs}_acc_{int(best_acc)}' + checkpoints
+                    torch.save(self.model, save_as)
+
+            else:
+                epochs_without_improvement += 1
+                if early_stopping is None:
+                    continue
+                elif epochs_without_improvement >= early_stopping:
+                    break
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
